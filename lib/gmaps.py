@@ -16,10 +16,7 @@ from lib.utils import *
 
 def scrape(gaiaID, client, cookies, config, headers, regex_rev_by_id, is_headless):
     def get_datetime(datepublished):
-        if datepublished.split()[0] == "a":
-            nb = 1
-        else:
-            nb = int(datepublished.split()[0])
+        nb = 1 if datepublished.split()[0] == "a" else int(datepublished.split()[0])
         if "minute" in datepublished:
             delta = relativedelta(minutes=nb)
         elif "hour" in datepublished:
@@ -34,7 +31,7 @@ def scrape(gaiaID, client, cookies, config, headers, regex_rev_by_id, is_headles
             delta = relativedelta(years=nb)
         else:
             delta = relativedelta()
-        return (datetime.today() - delta).replace(microsecond=0, second=0)
+        return (datetime.now() - delta).replace(microsecond=0, second=0)
 
     tmprinter = TMPrinter()
 
@@ -67,7 +64,7 @@ def scrape(gaiaID, client, cookies, config, headers, regex_rev_by_id, is_headles
 
     tmprinter.out("Setting cookies...")
     driver.get("https://www.google.com/robots.txt")
-    
+
     if not config.gmaps_cookies:
         cookies = {"CONSENT": config.default_consent_cookie}
     for k, v in cookies.items():
@@ -81,7 +78,7 @@ def scrape(gaiaID, client, cookies, config, headers, regex_rev_by_id, is_headles
 
     tab_info = driver.find_elements_by_css_selector('div.section-tab-info')
     if tab_info:
-        scroll_max = sum([int(x) for x in tab_info[0].text.split() if x.isdigit()])
+        scroll_max = sum(int(x) for x in tab_info[0].text.split() if x.isdigit())
     else:
         return False
 
@@ -96,7 +93,7 @@ def scrape(gaiaID, client, cookies, config, headers, regex_rev_by_id, is_headles
         reviews_elements = driver.find_elements_by_xpath('//div[@data-review-id][@aria-label]')
         tmprinter.out(f"Fetching reviews... ({len(reviews_elements)}/{scroll_max})")
         if time.time() > timeout_start + timeout:
-            tmprinter.out(f"Timeout while fetching reviews !")
+            tmprinter.out("Timeout while fetching reviews !")
             break
 
     tmprinter.out("Fetching internal requests history...")
@@ -175,8 +172,13 @@ def get_confidence(data, gmaps_radius):
 
     tmprinter.out("")
 
-    locations = {k: v for k, v in
-                 sorted(locations.items(), key=lambda k: len(k[1]["locations"]), reverse=True)}  # We sort it
+    locations = dict(
+        sorted(
+            locations.items(),
+            key=lambda k: len(k[1]["locations"]),
+            reverse=True,
+        )
+    )
 
     tmprinter.out("Identification of redundant areas...")
     to_del = []
@@ -186,7 +188,10 @@ def get_confidence(data, gmaps_radius):
         for hash2 in locations:
             if hash2 in to_del or hash == hash2:
                 continue
-            if all([loc in locations[hash]["locations"] for loc in locations[hash2]["locations"]]):
+            if all(
+                loc in locations[hash]["locations"]
+                for loc in locations[hash2]["locations"]
+            ):
                 to_del.append(hash2)
     for hash in to_del:
         del locations[hash]

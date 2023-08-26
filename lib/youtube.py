@@ -23,11 +23,11 @@ def youtube_channel_search(client, query):
             if len(results["channels"]) >= 10:
                 break
             title = channel["channelRenderer"]["title"]["simpleText"]
-            if not query.lower() in title.lower():
+            if query.lower() not in title.lower():
                 continue
             avatar_link = channel["channelRenderer"]["thumbnail"]["thumbnails"][0]["url"].split('=')[0]
             if avatar_link[:2] == "//":
-                avatar_link = "https:" + avatar_link
+                avatar_link = f"https:{avatar_link}"
             profile_url = "https://youtube.com" + channel["channelRenderer"]["navigationEndpoint"]["browseEndpoint"][
                 "canonicalBaseUrl"]
             req = client.get(avatar_link)
@@ -55,11 +55,11 @@ def youtube_channel_search_gdocs(client, query, data_path, gdocs_public_doc):
     results = {"channels": [], "length": len(channels)}
     channels = channels[:5]
 
+    retries = 2
     for profile_url in channels:
         data = None
         avatar_link = None
 
-        retries = 2
         for retry in list(range(retries))[::-1]:
             req = client.get(profile_url)
             source = req.text
@@ -92,9 +92,7 @@ def get_channels(client, query, data_path, gdocs_public_doc):
     if from_gdocs:
         from_gdocs["origin"] = "gdocs"
         to_process.append(from_gdocs)
-    if not to_process:
-        return False
-    return to_process
+    return False if not to_process else to_process
 
 
 def get_confidence(data, query, hash):
@@ -119,7 +117,7 @@ def get_confidence(data, query, hash):
     for source in data:
         for channel in source["channels"]:
             found_better = False
-            for source2 in data:
+            for _ in data:
                 for channel2 in source["channels"]:
                     if channel["profile_url"] == channel2["profile_url"]:
                         if channel2["score"] > channel["score"]:
@@ -131,13 +129,19 @@ def get_confidence(data, query, hash):
                 continue
             else:
                 channels.append(channel)
-    channels = sorted([json.loads(chan) for chan in set([json.dumps(channel) for channel in channels])],
-                      key=lambda k: k['score'], reverse=True)
-    panels = sorted(set([c["score"] for c in channels]), reverse=True)
+    channels = sorted(
+        [
+            json.loads(chan)
+            for chan in {json.dumps(channel) for channel in channels}
+        ],
+        key=lambda k: k['score'],
+        reverse=True,
+    )
+    panels = sorted({c["score"] for c in channels}, reverse=True)
     if not channels or (panels and panels[0] <= 0):
         return 0, []
 
-    maxscore = sum([p * score_steps for p in range(1, score_steps + 1)])
+    maxscore = sum(p * score_steps for p in range(1, score_steps + 1))
     for panel in panels:
         chans = [c for c in channels if c["score"] == panel]
         if len(chans) > 1:

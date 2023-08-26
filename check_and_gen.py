@@ -109,7 +109,7 @@ if __name__ == '__main__':
     if not cookies_from_file:
         new_cookies_entered = True
         print("\nEnter these browser cookies found at accounts.google.com :")
-        for name in cookies.keys():
+        for name in cookies:
             if not cookies[name]:
                 cookies[name] = input(f"{name} => ").strip().strip('\"')
     else:
@@ -124,7 +124,7 @@ if __name__ == '__main__':
         new_gen_inp = input("\nDo you want to enter new browser cookies from accounts.google.com ? (Y/n) ").lower()
         if new_gen_inp == "y":
             new_cookies_entered = True
-            for name in cookies.keys():
+            for name in cookies:
                 if not cookies[name]:
                     cookies[name] = input(f"{name} => ").strip().strip('\"')
         elif not valid:
@@ -138,7 +138,7 @@ if __name__ == '__main__':
             print("\n[+] The cookies seems valid !")
         else:
             exit("\n[-] Seems like the cookies are invalid, try regenerating them.")
-    
+
     if not new_cookies_entered:
         cookies = cookies_from_file
         choice = input("Do you want to generate new Google Docs "
@@ -153,11 +153,11 @@ if __name__ == '__main__':
         exit("[-] I can't find the Google Docs token in the source code...\n")
     else:
         gdoc_token = html.split(trigger)[1][:100].split('"')[0]
-        print("Google Docs Token => {}".format(gdoc_token))
+        print(f"Google Docs Token => {gdoc_token}")
 
     # get Google Hangouts token
     auth_token, hangouts_token = get_hangouts_tokens(cookies, driverpath)
-    print("Authorization Token => {}".format(auth_token))
-    print("Hangouts Token => {}".format(hangouts_token))
+    print(f"Authorization Token => {auth_token}")
+    print(f"Hangouts Token => {hangouts_token}")
 
     save_tokens(auth_token, gdoc_token, hangouts_token, cookies)
